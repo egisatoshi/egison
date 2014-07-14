@@ -47,7 +47,7 @@
 ;;
 ;; Helper function for List matcher, be careful for recursive calls
 ;;
-(define $map
+(define $map :: (($A / $B) {A} / {B})
   (lambda [$fn $xs]
     (match xs (list something)
       {[<nil> {}]

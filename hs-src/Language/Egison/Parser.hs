@@ -138,10 +138,10 @@ wildCardType :: Parser EgisonType
 wildCardType = reservedOp "_" >> pure WildCardType
 
 patVarType :: Parser EgisonType
-patVarType = P.lexeme lexer $ PatVarType <$> varName
+patVarType =  char '$' >> PatVarType <$> upperName
 
 varType :: Parser EgisonType
-varType = VarType <$> ident
+varType = VarType <$> upperName
 
 boolType :: Parser EgisonType
 boolType = reservedOp "Bool" >> pure BoolType
@@ -165,7 +165,11 @@ matcherType :: Parser EgisonType
 matcherType = reservedOp "Matcher" >> MatcherType <$> typeExpr'
 
 functionType :: Parser EgisonType
-functionType = undefined
+functionType = do
+  inTyps <- sepEndBy typeExpr' whiteSpace
+  string "/" >> whiteSpace
+  outTyps <- sepEndBy typeExpr' whiteSpace
+  return $ FunctionType (TupleType inTyps) (TupleType outTyps)
 
 --
 -- Expressions

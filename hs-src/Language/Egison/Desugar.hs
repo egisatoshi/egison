@@ -37,9 +37,9 @@ runDesugarM :: DesugarM a -> Fresh (Either EgisonError a)
 runDesugarM = runErrorT . flip runReaderT [] . unDesugarM
 
 desugarTopExpr :: EgisonTopExpr -> EgisonM EgisonTopExpr
-desugarTopExpr (Define name expr) = do
+desugarTopExpr (Define name typ expr) = do
   expr' <- liftEgisonM $ runDesugarM $ desugar expr
-  return (Define name expr')
+  return (Define name typ expr')
 desugarTopExpr (Test expr) = do
   expr' <- liftEgisonM $ runDesugarM $ desugar expr
   return (Test expr')
@@ -53,7 +53,7 @@ desugar (AlgebraicDataMatcherExpr patterns) = do
   matcherName <- fresh
   matcherRef <- return $ VarExpr matcherName
   matcher <- genMatcherClauses patterns matcherRef
-  return $ LetRecExpr [([matcherName], matcher)] matcherRef
+  return $ LetRecExpr [([matcherName], WildCardType, matcher)] matcherRef
     where
       genMatcherClauses :: [(String, [EgisonExpr])] ->  EgisonExpr -> DesugarM EgisonExpr
       genMatcherClauses patterns matcher = do
@@ -274,7 +274,7 @@ desugarPattern pattern = LetPat (map makeBinding $ S.elems $ collectName pattern
    collectName _ = S.empty
    
    makeBinding :: String -> BindingExpr
-   makeBinding name = ([name], HashExpr [])
+   makeBinding name = ([name], WildCardType, HashExpr [])
 
 desugarPattern' :: EgisonPattern -> DesugarM EgisonPattern
 desugarPattern' (ValuePat expr) = ValuePat <$> desugar expr
@@ -304,9 +304,9 @@ desugarLoopRange (LoopRange sExpr eExpr pattern) = do
   return $ LoopRange sExpr' eExpr' pattern'
 
 desugarBinding :: BindingExpr -> DesugarM BindingExpr
-desugarBinding (name, expr) = do
+desugarBinding (name, typ, expr) = do
   expr' <- desugar expr
-  return $ (name, expr')
+  return $ (name, typ, expr')
 
 desugarBindings :: [BindingExpr] -> DesugarM [BindingExpr]
 desugarBindings (bind:rest) = do

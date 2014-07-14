@@ -22,6 +22,8 @@ module Language.Egison.Types
     , LoopRange (..)
     , PrimitivePatPattern (..)
     , PrimitiveDataPattern (..)
+    -- * Egison types
+    , EgisonType (..)
     -- * Egison values
     , EgisonValue (..)
     , Matcher (..)
@@ -111,7 +113,7 @@ import System.IO.Unsafe (unsafePerformIO)
 --
 
 data EgisonTopExpr =
-    Define String EgisonExpr
+    Define String EgisonType EgisonExpr
   | Test EgisonExpr
   | Execute EgisonExpr
     -- temporary : we will replace load to import and export
@@ -176,7 +178,7 @@ data InnerExpr =
   | SubCollectionExpr EgisonExpr
  deriving (Show)
 
-type BindingExpr = ([String], EgisonExpr)
+type BindingExpr = ([String], EgisonType, EgisonExpr)
 type MatchClause = (EgisonPattern, EgisonExpr)
 type MatcherInfo = [(PrimitivePatPattern, EgisonExpr, [(PrimitiveDataPattern, EgisonExpr)])]
 
@@ -216,6 +218,25 @@ data PrimitiveDataPattern =
   | PDConsPat PrimitiveDataPattern PrimitiveDataPattern
   | PDSnocPat PrimitiveDataPattern PrimitiveDataPattern
   | PDConstantPat EgisonExpr
+ deriving (Show)
+
+--
+-- Types
+--
+
+data EgisonType =
+    WildCardType
+  | PatVarType String
+  | VarType String
+  | BoolType
+  | CharType
+  | IntegerType
+  | FloatType
+  | CollectionType EgisonType
+  | TupleType [EgisonType]
+  | MatcherType EgisonType
+  | FunctionType EgisonType EgisonType
+  | PatternType EgisonType
  deriving (Show)
 
 --

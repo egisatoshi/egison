@@ -114,6 +114,60 @@ doParse p input = either (throwError . fromParsecError) return $ parse p "egison
     fromParsecError = Parser . show
 
 --
+-- Types
+--
+
+typeExpr :: Parser EgisonType
+typeExpr = keywordTypeDef >> typeExpr'
+  
+typeExpr' :: Parser EgisonType
+typeExpr' = (try wildCardType
+                 <|> try patVarType
+                 <|> try varType
+                 <|> try boolType
+                 <|> try charType
+                 <|> try integerType
+                 <|> try floatType
+                 <|> collectionType
+                 <|> tupleType
+                 <|> parens (try matcherType
+                             <|> functionType)
+                 <?> "type expression")
+
+wildCardType :: Parser EgisonType
+wildCardType = reservedOp "_" >> pure WildCardType
+
+patVarType :: Parser EgisonType
+patVarType = P.lexeme lexer $ PatVarType <$> varName
+
+varType :: Parser EgisonType
+varType = VarType <$> ident
+
+boolType :: Parser EgisonType
+boolType = reservedOp "Bool" >> pure BoolType
+
+charType :: Parser EgisonType
+charType = reservedOp "Char" >> pure CharType
+
+integerType :: Parser EgisonType
+integerType = reservedOp "Integer" >> pure IntegerType
+
+floatType :: Parser EgisonType
+floatType = reservedOp "Float" >> pure CharType
+
+collectionType :: Parser EgisonType
+collectionType =  braces $ CollectionType <$> typeExpr'
+
+tupleType :: Parser EgisonType
+tupleType =  brackets $ TupleType <$> sepEndBy typeExpr' whiteSpace
+
+matcherType :: Parser EgisonType
+matcherType = reservedOp "Matcher" >> MatcherType <$> typeExpr'
+
+functionType :: Parser EgisonType
+functionType = undefined
+
+--
 -- Expressions
 --
 topExpr :: Parser EgisonTopExpr
@@ -126,7 +180,7 @@ topExpr = try (Test <$> expr)
       <?> "top-level expression"
 
 defineExpr :: Parser EgisonTopExpr
-defineExpr = keywordDefine >> Define <$> varName <*> expr
+defineExpr = keywordDefine >> Define <$> varName <*> option WildCardType typeExpr <*> expr
 
 testExpr :: Parser EgisonTopExpr
 testExpr = keywordTest >> Test <$> expr
@@ -321,13 +375,13 @@ statements :: Parser [BindingExpr]
 statements = braces $ sepEndBy statement whiteSpace
 
 statement :: Parser BindingExpr
-statement = try binding <|> brackets (([],) <$> expr)
+statement = try binding <|> brackets (([],TupleType [],) <$> expr)
 
 bindings :: Parser [BindingExpr]
 bindings = braces $ sepEndBy binding whiteSpace
 
 binding :: Parser BindingExpr
-binding = brackets $ (,) <$> varNames <*> expr
+binding = brackets $ (,,) <$> varNames <*> option WildCardType typeExpr <*> expr
 
 varNames :: Parser [String]
 varNames = return <$> varName
@@ -552,7 +606,7 @@ reservedKeywords =
   , "array-bounds"
   , "array-ref"
   , "something"
-  , "undefined"]
+  , "::"]
   
 reservedOperators :: [String]
 reservedOperators = 
@@ -584,7 +638,7 @@ keywordSeq                  = reserved "seq"
 keywordApply                = reserved "apply"
 keywordLambda               = reserved "lambda"
 keywordMemoizedLambda       = reserved "memoized-lambda"
-keywordMemoize             = reserved "memoize"
+keywordMemoize              = reserved "memoize"
 keywordPatternFunction      = reserved "pattern-function"
 keywordLetRec               = reserved "letrec"
 keywordLet                  = reserved "let"
@@ -608,6 +662,7 @@ keywordAlgebraicDataMatcher = reserved "algebraic-data-matcher"
 keywordGenerateArray        = reserved "generate-array"
 keywordArrayBounds          = reserved "array-bounds"
 keywordArrayRef             = reserved "array-ref"
+keywordTypeDef              = reserved "::"
 
 sign :: Num a => Parser (a -> a)
 sign = (char '-' >> return negate)

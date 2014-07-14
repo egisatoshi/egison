@@ -72,7 +72,7 @@ evalTopExprs env exprs = do
  where
   collectDefs (expr:exprs) bindings rest =
     case expr of
-      Define name expr -> collectDefs exprs ((name, expr) : bindings) rest
+      Define name typ expr -> collectDefs exprs ((name, expr) : bindings) rest
       Load file -> do
         exprs' <- loadLibraryFile file
         collectDefs (exprs' ++ exprs) bindings rest
@@ -91,7 +91,7 @@ evalTopExprsNoIO env exprs = do
  where
   collectDefs (expr:exprs) bindings rest =
     case expr of
-      Define name expr -> collectDefs exprs ((name, expr) : bindings) rest
+      Define name typ expr -> collectDefs exprs ((name, expr) : bindings) rest
       Load _ -> throwError $ strMsg "No IO support"
       LoadFile _ -> throwError $ strMsg "No IO support"
       _ -> collectDefs exprs bindings (expr : rest)
@@ -106,7 +106,7 @@ evalTopExpr env topExpr = do
   return $ snd ret
 
 evalTopExpr' :: Env -> EgisonTopExpr -> EgisonM (Maybe String, Env)
-evalTopExpr' env (Define name expr) = recursiveBind env [(name, expr)] >>= return . ((,) Nothing)
+evalTopExpr' env (Define name typ expr) = recursiveBind env [(name, expr)] >>= return . ((,) Nothing)
 evalTopExpr' env (Test expr) = do
   val <- evalExprDeep env expr
   return (Just (show val), env)
@@ -198,9 +198,9 @@ evalExpr env (LetExpr bindings expr) =
   mapM extractBindings bindings >>= flip evalExpr expr . extendEnv env . concat
  where
   extractBindings :: BindingExpr -> EgisonM [Binding]
-  extractBindings ([name], expr) =
+  extractBindings ([name], typ, expr) =
     makeBindings [name] . (:[]) <$> newObjectRef env expr
-  extractBindings (names, expr) =
+  extractBindings (names, typ, expr) =
     makeBindings names <$> (evalExpr env expr >>= fromTuple)
 
 evalExpr env (LetRecExpr bindings expr) =
@@ -208,8 +208,8 @@ evalExpr env (LetRecExpr bindings expr) =
   in recursiveBind env bindings' >>= flip evalExpr expr 
  where
   extractBindings :: BindingExpr -> State Int [(String, EgisonExpr)]
-  extractBindings ([name], expr) = return [(name, expr)]
-  extractBindings (names, expr) = do
+  extractBindings ([name], typ, expr) = return [(name, expr)]
+  extractBindings (names, typ, expr) = do
     var <- genVar
     let k = length names
         target = VarExpr var
@@ -227,9 +227,9 @@ evalExpr env (DoExpr bindings expr) = return $ Value $ IOFunc $ do
   let body = foldr genLet (TupleExpr [VarExpr "#1", expr]) bindings
   applyFunc (Value $ Func env ["#1"] body) $ Value World
  where
-  genLet (names, expr) expr' =
-    LetExpr [(["#1", "#2"], ApplyExpr expr $ TupleExpr [VarExpr "#1"])] $
-    LetExpr [(names, VarExpr "#2")] expr'
+  genLet (names, typ, expr) expr' =
+    LetExpr [(["#1", "#2"], WildCardType, ApplyExpr expr $ TupleExpr [VarExpr "#1"])] $
+    LetExpr [(names, typ, VarExpr "#2")] expr'
 
 evalExpr env (IoExpr expr) = do
   io <- evalExpr env expr
@@ -559,9 +559,9 @@ processMState' (MState env loops bindings ((MAtom pattern target matcher):trees)
     VarPat _ -> throwError $ strMsg "cannot use variable except in pattern function"
 
     LetPat bindings' pattern' ->
-      let extractBindings ([name], expr) =
+      let extractBindings ([name], typ, expr) =
             makeBindings [name] . (:[]) <$> newObjectRef env' expr
-          extractBindings (names, expr) =
+          extractBindings (names, typ, expr) =
             makeBindings names <$> (evalExpr env' expr >>= fromTuple)
       in
        liftM concat (mapM extractBindings bindings')

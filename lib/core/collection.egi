@@ -5,7 +5,7 @@
 ;;;
 ;;; List
 ;;;
-(define $list
+(define $list :: (Matcher {$A})
   (lambda [$a]
     (matcher-bfs
       {[,$val []

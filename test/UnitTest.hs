@@ -30,7 +30,7 @@ runTestCase file = TestLabel file . TestCase $ do
         assertEgisonM :: EgisonM a -> Assertion
         assertEgisonM m = fromEgisonM m >>= assertString . either show (const "")
     
-        collectDefsAndTests (Define name expr) (bindings, tests) =
+        collectDefsAndTests (Define name _ expr) (bindings, tests) =
           ((name, expr) : bindings, tests)
         collectDefsAndTests (Test expr) (bindings, tests) =
           (bindings, expr : tests)

@@ -24,6 +24,7 @@ module Language.Egison.Types
     , PrimitiveDataPattern (..)
     -- * Egison types
     , EgisonType (..)
+    , EgisonTypeClass (..)
     -- * Egison values
     , EgisonValue (..)
     , Matcher (..)
@@ -226,7 +227,7 @@ data PrimitiveDataPattern =
 
 data EgisonType =
     WildCardType
-  | PatVarType String
+  | PatVarType String EgisonTypeClass
   | VarType String
   | BoolType
   | CharType
@@ -237,6 +238,11 @@ data EgisonType =
   | MatcherType EgisonType
   | FunctionType EgisonType EgisonType
   | PatternType EgisonType
+ deriving (Show)
+
+data EgisonTypeClass =
+    WildCardTypeClass
+  | VarTypeClass String
  deriving (Show)
 
 --

@@ -5,7 +5,7 @@
 ;;;
 ;;; List
 ;;;
-(define $list :: (Matcher {$A})
+(define $list : (Matcher {$A})
   (lambda [$a]
     (matcher-bfs
       {[,$val []
@@ -47,7 +47,7 @@
 ;;
 ;; Helper function for List matcher, be careful for recursive calls
 ;;
-(define $map :: (($A / $B) {A} / {B})
+(define $map : (($A / $B) {A} / {B})
   (lambda [$fn $xs]
     (match xs (list something)
       {[<nil> {}]
@@ -150,13 +150,13 @@
 ;;
 ;; Simple predicate
 ;;
-(define $member?
+(define $member? : ($A :: Eq {A} / Bool)
   (lambda [$x $ys]
     (match ys (list something)
       {[<join _ <cons ,x _>> #t]
        [_ #f]})))
 
-(define $member?/m
+(define $member?/m : ((Matcher $A :: Eq) A {A} / Bool)
   (lambda [$a $x $ys]
     (match ys (list a)
       {[<join _ <cons ,x _>> #t]

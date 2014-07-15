@@ -57,6 +57,8 @@
      "|"
      "\\\&"
      "@"
+     ":"
+     "::"
      "\\<_\\>"
      ))
   "Subdued expressions to highlight in Egison modes.")

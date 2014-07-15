@@ -134,11 +134,27 @@ typeExpr' = (try wildCardType
                              <|> functionType)
                  <?> "type expression")
 
+
+typeClassExpr :: Parser EgisonTypeClass
+typeClassExpr = keywordTypeClassDef >> typeClassExpr'
+  
+typeClassExpr' :: Parser EgisonTypeClass
+typeClassExpr' = (try wildCardTypeClass
+                      <|> try varTypeClass
+                      <?> "type class expression")
+
+wildCardTypeClass :: Parser EgisonTypeClass
+wildCardTypeClass = reservedOp "_" >> pure WildCardTypeClass
+
+varTypeClass :: Parser EgisonTypeClass
+varTypeClass = VarTypeClass <$> upperName
+
+
 wildCardType :: Parser EgisonType
 wildCardType = reservedOp "_" >> pure WildCardType
 
 patVarType :: Parser EgisonType
-patVarType =  char '$' >> PatVarType <$> upperName
+patVarType =  char '$' >> PatVarType <$> upperName <*> option WildCardTypeClass typeClassExpr
 
 varType :: Parser EgisonType
 varType = VarType <$> upperName
@@ -610,6 +626,7 @@ reservedKeywords =
   , "array-bounds"
   , "array-ref"
   , "something"
+  , ":"
   , "::"]
   
 reservedOperators :: [String]
@@ -666,7 +683,8 @@ keywordAlgebraicDataMatcher = reserved "algebraic-data-matcher"
 keywordGenerateArray        = reserved "generate-array"
 keywordArrayBounds          = reserved "array-bounds"
 keywordArrayRef             = reserved "array-ref"
-keywordTypeDef              = reserved "::"
+keywordTypeDef              = reserved ":"
+keywordTypeClassDef         = reserved "::"
 
 sign :: Num a => Parser (a -> a)
 sign = (char '-' >> return negate)

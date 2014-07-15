@@ -8,6 +8,7 @@
   (algebraic-data-type
     {<Less> <Equal> <Greater>}))
 
+#|
 (define $Ord
   (type-class $A :: Eq
     {$lt? : (A A / Bool)}
@@ -21,6 +22,7 @@
           (if (eq? m n)
             <Equal>
             <Greater>)))]}))
+|#
 
 (define $ordering
   (algebraic-data-matcher

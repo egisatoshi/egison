@@ -22,7 +22,7 @@
 ;;
 ;; Pattern modularizations
 ;;
-(define $twin :: (~Hai ~{Hai} / ~{Hai})
+(define $twin :: (~$A ~{A} / ~{A})
   (pattern-function [$pat1 $pat2]
     <cons (& $pat pat1)
      <cons ,pat

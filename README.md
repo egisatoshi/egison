@@ -208,6 +208,38 @@ The <a target="_blank" href="http://www.egison.org/manual/mechanism.html">Patter
 
 Please read <a target="_blank" href="http://arxiv.org/abs/1407.0729">our paper on arXiv.org</a> for details.
 
+## Type System
+
+Egison has static type system from version 4.
+
+### Type Declarations
+
+Types are declarared as follow.
+
+```
+(define $map : (($A / $B) {A} / {B})
+  (lambda [$fn $xs]
+    (match xs (list something)
+      {[<nil> {}]
+       [<cons $x $rs> {(fn x) @(map fn rs)}]})))
+```
+
+### Type Classes
+
+We can use type classes as follow.
+We don't support multi-parameter type classes.
+
+```
+(define $qsort : ({$A :: Ord} / {A})
+  (match-lambda (list something)
+    {[<nil> {}]
+     [<cons $x <nil>> {x}]
+     [$xs (let {[$n (length xs)]}
+            (let {[$p (nth (quotient n 2) xs)]}
+              (let {[[$ys1 $ys2 $ys3] (split-by-ordering xs p)]}
+                {@(qsort ys1) @ys2 @(qsort ys3)})))]}))
+```
+
 ## Note for Developers
 
 ### How to Run Test

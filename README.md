@@ -230,6 +230,24 @@ We can use type classes as follow.
 We don't support multi-parameter type classes.
 
 ```
+(define $Ordering
+  (algebraic-data-type
+    {<Less> <Equal> <Greater>}))
+
+(define $Ord
+  (type-class $A :: Eq
+    {$lt? : (A / Bool)}
+    {[$lte? : (A / Bool) (lambda [$x $y] (or (lt? x y) (eq? x y)))]
+     [$gte? : (A / Bool) (lt? $2 $1)]
+     [$gt? : (A / Bool) (lte? $2 $1)]
+     [$compare : (A / Ordering)
+      (lambda [$m $n]
+        (if (lt? m n)
+          <Less>
+          (if (eq? m n)
+            <Equal>
+            <Greater>)))]}))
+
 (define $qsort : ({$A :: Ord} / {A})
   (match-lambda (list something)
     {[<nil> {}]

@@ -248,6 +248,8 @@ We don't support multi-parameter type classes.
         (if (eq? m n)
           <Equal>
           <Greater>)))]})
+
+(instance Integer Ord {[$lt? lt-integer?]})
 ```
 
 ## Note for Developers

@@ -14,6 +14,7 @@
      "\\<define\\>"
      "\\<type\\>"
      "\\<class\\>"
+     "\\<instance\\>"
      "\\<test\\>"
      "\\<execute\\>"
      "\\<load\\>"
@@ -135,6 +136,7 @@
   (cond ((equal "define" name) 2)
         ((equal "type" name) 2)
         ((equal "class" name) 2)
+        ((equal "instance" name) 2)
         ((equal "test" name) 2)
         ((equal "load" name) 2)
         ((equal "load-file" name) 2)

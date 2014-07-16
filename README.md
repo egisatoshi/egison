@@ -248,15 +248,6 @@ We don't support multi-parameter type classes.
         (if (eq? m n)
           <Equal>
           <Greater>)))]})
-
-(define $qsort : ({$A :: Ord} / {A})
-  (match-lambda (list something)
-    {[<nil> {}]
-     [<cons $x <nil>> {x}]
-     [$xs (let {[$n (length xs)]}
-            (let {[$p (nth (quotient n 2) xs)]}
-              (let {[[$ys1 $ys2 $ys3] (split-by-ordering xs p)]}
-                {@(qsort ys1) @ys2 @(qsort ys3)})))]}))
 ```
 
 ## Note for Developers

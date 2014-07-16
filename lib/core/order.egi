@@ -4,47 +4,40 @@
 ;;;;;
 ;;;;;
 
-(define $Ordering
-  (algebraic-data-type
-    {<Less> <Equal> <Greater>}))
+;;
+;; Types
+;;
+(type $Ordering {<Less> <Equal> <Greater>})
 
-#|
-(define $Ord
-  (type-class $A :: Eq
-    {$lt? : (A A / Bool)}
-    {[$lte? : (A A / Bool) (lambda [$x $y] (or (lt? x y) (eq? x y)))]
-     [$gte? : (A A / Bool) (lt? $2 $1)]
-     [$gt? : (A A / Bool) (lte? $2 $1)]
-     [$compare : (A A / Ordering)
-      (lambda [$m $n]
-        (if (lt? m n)
-          <Less>
-          (if (eq? m n)
-            <Equal>
-            <Greater>)))]}))
-|#
-
-(define $ordering
+(define $ordering : (Matcher Ordering)
   (algebraic-data-matcher
     {<less> <equal> <greater>}))
 
-(define $compare
-  (lambda [$m $n]
-    (if (lt? m n)
+(class $Ord $A :: Eq
+  {$lt? : (A A / Bool)}
+  {[$lte? : (A A / Bool) (lambda [$x $y] (or (lt? x y) (eq? x y)))]
+   [$gte? : (A A / Bool) (lt? $2 $1)]
+   [$gt? : (A A / Bool) (lte? $2 $1)]
+   [$compare : (A A / Ordering)
+    (lambda [$m $n]
+      (if (lt? m n)
         <Less>
         (if (eq? m n)
-            <Equal>
-            <Greater>))))
+          <Equal>
+          <Greater>)))]})
 
-(define $min
+;;
+;; Functions
+;;
+(define $min : ({$A :: Ord} / A)
   (lambda [$ns]
     (foldl' (lambda [$x $y] (if (lt? x y) x y)) (car ns) (cdr ns))))
 
-(define $max
+(define $max : ({$A :: Ord} / A)
   (lambda [$ns]
     (foldl' (lambda [$x $y] (if (gt? x y) x y)) (car ns) (cdr ns))))
 
-(define $min-and-max
+(define $min-and-max : ({$A :: Ord} / A A)
   (lambda [$ns]
     (foldl' (lambda [$ret $x]
               (match ret [integer integer]
@@ -54,7 +47,7 @@
            [(car ns) (car ns)]
            (cdr ns))))
 
-(define $split-by-ordering
+(define $split-by-ordering : ({$A :: Ord} A / {A} {A} {A})
   (lambda [$xs $p]
     (match xs (list something)
       {[<nil> [{} {} {}]]

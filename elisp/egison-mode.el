@@ -12,6 +12,8 @@
   (eval-when-compile
     (list
      "\\<define\\>"
+     "\\<type\\>"
+     "\\<class\\>"
      "\\<test\\>"
      "\\<execute\\>"
      "\\<load\\>"
@@ -131,6 +133,8 @@
 
 (defun keyword-indent-point (name)
   (cond ((equal "define" name) 2)
+        ((equal "type" name) 2)
+        ((equal "class" name) 2)
         ((equal "test" name) 2)
         ((equal "load" name) 2)
         ((equal "load-file" name) 2)

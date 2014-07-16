@@ -141,6 +141,7 @@ typeClassExpr = keywordTypeClassDef >> typeClassExpr'
 typeClassExpr' :: Parser EgisonTypeClass
 typeClassExpr' = (try wildCardTypeClass
                       <|> try varTypeClass
+                      <|> try tupleTypeClass
                       <?> "type class expression")
 
 wildCardTypeClass :: Parser EgisonTypeClass
@@ -148,6 +149,9 @@ wildCardTypeClass = reservedOp "_" >> pure WildCardTypeClass
 
 varTypeClass :: Parser EgisonTypeClass
 varTypeClass = VarTypeClass <$> upperName
+
+tupleTypeClass :: Parser EgisonTypeClass
+tupleTypeClass = brackets $ TupleTypeClass <$> sepEndBy typeClassExpr' whiteSpace
 
 
 wildCardType :: Parser EgisonType

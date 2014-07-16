@@ -243,6 +243,7 @@ data EgisonType =
 data EgisonTypeClass =
     WildCardTypeClass
   | VarTypeClass String
+  | TupleTypeClass [EgisonTypeClass]
  deriving (Show)
 
 --

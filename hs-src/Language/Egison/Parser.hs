@@ -135,30 +135,30 @@ typeExpr' = (try wildCardType
                  <?> "type expression")
 
 
-typeClassExpr :: Parser EgisonTypeClass
-typeClassExpr = keywordTypeClassDef >> typeClassExpr'
+classExpr :: Parser EgisonClass
+classExpr = keywordClassDef >> classExpr'
   
-typeClassExpr' :: Parser EgisonTypeClass
-typeClassExpr' = (try wildCardTypeClass
-                      <|> try varTypeClass
-                      <|> try tupleTypeClass
+classExpr' :: Parser EgisonClass
+classExpr' = (try wildCardClass
+                      <|> try varClass
+                      <|> try tupleClass
                       <?> "type class expression")
 
-wildCardTypeClass :: Parser EgisonTypeClass
-wildCardTypeClass = reservedOp "_" >> pure WildCardTypeClass
+wildCardClass :: Parser EgisonClass
+wildCardClass = reservedOp "_" >> pure WildCardClass
 
-varTypeClass :: Parser EgisonTypeClass
-varTypeClass = VarTypeClass <$> upperName
+varClass :: Parser EgisonClass
+varClass = VarClass <$> upperName
 
-tupleTypeClass :: Parser EgisonTypeClass
-tupleTypeClass = brackets $ TupleTypeClass <$> sepEndBy typeClassExpr' whiteSpace
+tupleClass :: Parser EgisonClass
+tupleClass = brackets $ TupleClass <$> sepEndBy classExpr' whiteSpace
 
 
 wildCardType :: Parser EgisonType
 wildCardType = reservedOp "_" >> pure WildCardType
 
 patVarType :: Parser EgisonType
-patVarType =  char '$' >> PatVarType <$> upperName <*> option WildCardTypeClass typeClassExpr
+patVarType =  char '$' >> PatVarType <$> upperName <*> option WildCardClass classExpr
 
 varType :: Parser EgisonType
 varType = VarType <$> upperName
@@ -196,27 +196,38 @@ functionType = do
 --
 topExpr :: Parser EgisonTopExpr
 topExpr = try (Test <$> expr)
-      <|> try (parens (defineExpr
-                   <|> testExpr
-                   <|> executeExpr
-                   <|> loadFileExpr
-                   <|> loadExpr))
+      <|> try (parens (defineTopExpr
+                   <|> typeTopExpr
+                   <|> classTopExpr
+                   <|> testTopExpr
+                   <|> executeTopExpr
+                   <|> loadFileTopExpr
+                   <|> loadTopExpr))
       <?> "top-level expression"
 
-defineExpr :: Parser EgisonTopExpr
-defineExpr = keywordDefine >> Define <$> varName <*> option WildCardType typeExpr <*> expr
+defineTopExpr :: Parser EgisonTopExpr
+defineTopExpr = keywordDefine >> Define <$> varName <*> option WildCardType typeExpr <*> expr
 
-testExpr :: Parser EgisonTopExpr
-testExpr = keywordTest >> Test <$> expr
+typeTopExpr :: Parser EgisonTopExpr
+typeTopExpr = keywordType >> Type <$> varName <*> braces $ sepEndBy (angles $ (,) <$> upperName <*> sepEndBy typeExpr' whiteSpace) whiteSpace
 
-executeExpr :: Parser EgisonTopExpr
-executeExpr = keywordExecute >> Execute <$> expr
+classTopExpr :: Parser EgisonTopExpr
+classTopExpr = keywordType >> Class <$> varName <*> varName
+                                                <*> option WildCardClass classExpr
+                                                <*> braces $ (,) <$> varName <*> option WildCardType typeExpr
+                                                <*> braces $ (,) <$> varName <*> option WildCardType typeExpr <*> expr
 
-loadFileExpr :: Parser EgisonTopExpr
-loadFileExpr = keywordLoadFile >> LoadFile <$> stringLiteral
+testTopExpr :: Parser EgisonTopExpr
+testTopExpr = keywordTest >> Test <$> expr
 
-loadExpr :: Parser EgisonTopExpr
-loadExpr = keywordLoad >> Load <$> stringLiteral
+executeTopExpr :: Parser EgisonTopExpr
+executeTopExpr = keywordExecute >> Execute <$> expr
+
+loadFileTopExpr :: Parser EgisonTopExpr
+loadFileTopExpr = keywordLoadFile >> LoadFile <$> stringLiteral
+
+loadTopExpr :: Parser EgisonTopExpr
+loadTopExpr = keywordLoad >> Load <$> stringLiteral
 
 exprs :: Parser [EgisonExpr]
 exprs = endBy expr whiteSpace
@@ -602,6 +613,8 @@ lexer = P.makeTokenParser egisonDef
 reservedKeywords :: [String]
 reservedKeywords = 
   [ "define"
+  , "type"
+  , "class"
   , "test"
   , "execute"
   , "load-file"
@@ -652,6 +665,8 @@ reservedOp :: String -> Parser ()
 reservedOp = P.reservedOp lexer
 
 keywordDefine               = reserved "define"
+keywordType                 = reserved "type"
+keywordClass                = reserved "class"
 keywordTest                 = reserved "test"
 keywordExecute              = reserved "execute"
 keywordLoadFile             = reserved "load-file"
@@ -688,7 +703,7 @@ keywordGenerateArray        = reserved "generate-array"
 keywordArrayBounds          = reserved "array-bounds"
 keywordArrayRef             = reserved "array-ref"
 keywordTypeDef              = reserved ":"
-keywordTypeClassDef         = reserved "::"
+keywordClassDef             = reserved "::"
 
 sign :: Num a => Parser (a -> a)
 sign = (char '-' >> return negate)

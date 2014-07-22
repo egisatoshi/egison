@@ -24,7 +24,7 @@ module Language.Egison.Types
     , PrimitiveDataPattern (..)
     -- * Egison types
     , EgisonType (..)
-    , EgisonTypeClass (..)
+    , EgisonClass (..)
     -- * Egison values
     , EgisonValue (..)
     , Matcher (..)
@@ -115,6 +115,8 @@ import System.IO.Unsafe (unsafePerformIO)
 
 data EgisonTopExpr =
     Define String EgisonType EgisonExpr
+  | Type String  [(String, [EgisonType])]
+  | Class String String EgisonClass [(String, EgisonType)] [(String, EgisonType, EgisonExpr)]
   | Test EgisonExpr
   | Execute EgisonExpr
     -- temporary : we will replace load to import and export
@@ -227,7 +229,7 @@ data PrimitiveDataPattern =
 
 data EgisonType =
     WildCardType
-  | PatVarType String EgisonTypeClass
+  | PatVarType String EgisonClass
   | VarType String
   | BoolType
   | CharType
@@ -240,10 +242,10 @@ data EgisonType =
   | PatternType EgisonType
  deriving (Show)
 
-data EgisonTypeClass =
-    WildCardTypeClass
-  | VarTypeClass String
-  | TupleTypeClass [EgisonTypeClass]
+data EgisonClass =
+    WildCardClass
+  | VarClass String
+  | TupleClass [EgisonClass]
  deriving (Show)
 
 --

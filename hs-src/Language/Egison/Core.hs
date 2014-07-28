@@ -117,6 +117,7 @@ evalTopExpr' env (Execute expr) = do
     _ -> throwError $ TypeMismatch "io" io
 evalTopExpr' env (Load file) = loadLibraryFile file >>= evalTopExprs env >>= return . ((,) Nothing)
 evalTopExpr' env (LoadFile file) = loadFile file >>= evalTopExprs env >>= return . ((,) Nothing)
+evalTopExpr' env _ = return (Nothing, env)
 
 evalExpr :: Env -> EgisonExpr -> EgisonM WHNFData
 evalExpr _ (CharExpr c) = return . Value $ Char c

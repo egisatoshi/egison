@@ -209,13 +209,13 @@ defineTopExpr :: Parser EgisonTopExpr
 defineTopExpr = keywordDefine >> Define <$> varName <*> option WildCardType typeExpr <*> expr
 
 typeTopExpr :: Parser EgisonTopExpr
-typeTopExpr = keywordType >> Type <$> varName <*> braces $ sepEndBy (angles $ (,) <$> upperName <*> sepEndBy typeExpr' whiteSpace) whiteSpace
+typeTopExpr = keywordType >> Type <$> varName <*> braces (sepEndBy (angles $ (,) <$> upperName <*> sepEndBy typeExpr' whiteSpace) whiteSpace)
 
 classTopExpr :: Parser EgisonTopExpr
-classTopExpr = keywordType >> Class <$> varName <*> varName
-                                                <*> option WildCardClass classExpr
-                                                <*> braces $ (,) <$> varName <*> option WildCardType typeExpr
-                                                <*> braces $ (,) <$> varName <*> option WildCardType typeExpr <*> expr
+classTopExpr = keywordClass >> Class <$> varName <*> varName
+                                                 <*> option WildCardClass classExpr
+                                                 <*> braces (sepEndBy (brackets $ (,) <$> varName <*> option WildCardType typeExpr) whiteSpace)
+                                                 <*> braces (sepEndBy (brackets $ (,,) <$> varName <*> option WildCardType typeExpr <*> expr) whiteSpace)
 
 testTopExpr :: Parser EgisonTopExpr
 testTopExpr = keywordTest >> Test <$> expr

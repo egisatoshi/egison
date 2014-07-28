@@ -44,6 +44,14 @@ module Language.Egison.Types
     , nullEnv
     , extendEnv
     , refVar
+    -- * Type Environment
+    , TypeRef (..)
+    , TypeEnv (..)
+    , TypeVar (..)
+    , TypeBinding (..)
+    , nullTypeEnv
+    , extendTypeEnv
+    , refTypeVar
     -- * Pattern matching
     , Match
     , PMMode (..)
@@ -530,6 +538,27 @@ extendEnv env = (: env) . HashMap.fromList
 refVar :: Env -> Var -> EgisonM ObjectRef
 refVar env var = maybe (throwError $ UnboundVariable var) return
                        (msum $ map (HashMap.lookup var) env)
+
+
+--
+-- Type Environment
+--
+
+type TypeRef = IORef EgisonType
+
+type TypeEnv = [HashMap Var TypeRef]
+type TypeVar = String
+type TypeBinding = (TypeVar, TypeRef)
+
+nullTypeEnv :: TypeEnv
+nullTypeEnv = []
+
+extendTypeEnv :: TypeEnv -> [TypeBinding] -> TypeEnv
+extendTypeEnv env = (: env) . HashMap.fromList
+
+refTypeVar :: TypeEnv -> TypeVar -> EgisonM TypeRef
+refTypeVar env var = maybe (throwError $ UnboundVariable var) return
+                           (msum $ map (HashMap.lookup var) env)
 
 --
 -- Pattern Match

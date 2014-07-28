@@ -30,10 +30,13 @@ inferBindings = undefined
 
 inferExpr :: TypeEnv -> EgisonExpr -> EgisonM EgisonType
 inferExpr env (VarExpr name) = refTypeVar env name >>= liftIO . readIORef
+inferExpr env (LambdaExpr names expr) = do
+  inferExpr (extendTypeEnv undefined env) expr
 inferExpr env (ApplyExpr fnExpr argExpr) = do
   fnTyp <- inferExpr env fnExpr
+  fnTyp' <- unify (FunctionType WildCardType WildCardType) fnTyp
   argTyp <- inferExpr env argExpr
-  case fnTyp of
+  case fnTyp' of
     FunctionType fnArgTyp fnRetTyp -> do
       unify env argTyp fnArgTyp
       return fnRetTyp
@@ -42,5 +45,6 @@ inferExpr env (ApplyExpr fnExpr argExpr) = do
 inferExpr _ _ = undefined
 
 unify :: TypeEnv -> EgisonType -> EgisonType -> EgisonM EgisonType
+unify _ WildCardType WildCardType = return WildCardType
 unify _ BoolType BoolType = return BoolType
 unify _ _ _ = undefined

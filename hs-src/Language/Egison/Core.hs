@@ -93,7 +93,7 @@ evalTopExprsTestOnly env exprs = do
  where
   collectDefs (expr:exprs) bindings rest =
     case expr of
-      Define name expr -> collectDefs exprs ((name, expr) : bindings) rest
+      Define name typ expr -> collectDefs exprs ((name, expr) : bindings) rest
       Load file -> do
         exprs' <- loadLibraryFile file
         collectDefs (exprs' ++ exprs) bindings rest

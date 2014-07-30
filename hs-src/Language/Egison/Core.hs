@@ -12,6 +12,7 @@ module Language.Egison.Core
     (
     -- * Egison code evaluation
       evalTopExprs
+    , evalTopExprsTestOnly
     , evalTopExprsNoIO
     , evalTopExpr
     , evalExpr
@@ -79,7 +80,28 @@ evalTopExprs env exprs = do
       LoadFile file -> do
         exprs' <- loadFile file
         collectDefs (exprs' ++ exprs) bindings rest
-      _ -> collectDefs exprs bindings (expr : rest)
+      Execute _ -> collectDefs exprs bindings (expr : rest)
+      _ -> collectDefs exprs bindings rest
+  collectDefs [] bindings rest = return (bindings, reverse rest)
+
+evalTopExprsTestOnly :: Env -> [EgisonTopExpr] -> EgisonM Env
+evalTopExprsTestOnly env exprs = do
+  (bindings, rest) <- collectDefs exprs [] []
+  env <- recursiveBind env bindings
+  forM_ rest $ evalTopExpr env
+  return env
+ where
+  collectDefs (expr:exprs) bindings rest =
+    case expr of
+      Define name expr -> collectDefs exprs ((name, expr) : bindings) rest
+      Load file -> do
+        exprs' <- loadLibraryFile file
+        collectDefs (exprs' ++ exprs) bindings rest
+      LoadFile file -> do
+        exprs' <- loadFile file
+        collectDefs (exprs' ++ exprs) bindings rest
+      Test _ -> collectDefs exprs bindings (expr : rest)
+      _ -> collectDefs exprs bindings rest
   collectDefs [] bindings rest = return (bindings, reverse rest)
 
 evalTopExprsNoIO :: Env -> [EgisonTopExpr] -> EgisonM Env
@@ -225,7 +247,7 @@ evalExpr env (LetRecExpr bindings expr) =
   genVar = modify (1+) >> gets (('#':) . show)
 
 evalExpr env (DoExpr bindings expr) = return $ Value $ IOFunc $ do
-  let body = foldr genLet (TupleExpr [VarExpr "#1", expr]) bindings
+  let body = foldr genLet (ApplyExpr expr $ TupleExpr [VarExpr "#1"]) bindings
   applyFunc (Value $ Func env ["#1"] body) $ Value World
  where
   genLet (names, typ, expr) expr' =

@@ -4,15 +4,12 @@
       {[<nil> (do {} [])]
        [<cons $x $rs>
         (do {[(write x)]
-             [(write "\n")]
-             [(write-each rs)]
-             }
-          [])]})))
+             [(write "\n")]}
+          (write-each rs))]})))
 
 (define $main
   (lambda [$argv]
     (do {[(write "argv: ")]
-         [(write argv)]
+         [(write (show argv))]
          [(write "\n")]
-         [(write-each argv)]}
-      [])))
+         [(write-each argv)]})))

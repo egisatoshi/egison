@@ -25,29 +25,46 @@ main = do args <- getArgs
           case opts of
             Options {optShowHelp = True} -> printHelp
             Options {optShowVersion = True} -> printVersionNumber
-            Options {optPrompt = prompt, optShowBanner = bannerFlag, optNoIO = noIOFlag} -> do
+            Options {optEvalString = mExpr, optExecuteString = mCmd, optLoadFiles = loadFiles, optPrompt = prompt, optShowBanner = bannerFlag, optNoIO = noIOFlag} -> do
               env <- if noIOFlag then initialEnvNoIO else initialEnv
-              case nonOpts of
-                [] -> do
-                  when bannerFlag showBanner >> repl noIOFlag env prompt >> when bannerFlag showByebyeMessage
-                (file:args) -> do
-                  case opts of
-                    Options {optLoadOnly = True} -> do
-                      result <- if noIOFlag
-                                  then do input <- readFile file
-                                          runEgisonTopExprsNoIO env input
-                                  else evalEgisonTopExprs env [LoadFile file]
-                      either print (const $ return ()) result
-                    Options {optLoadOnly = False} -> do
-                      result <- evalEgisonTopExprs env [LoadFile file, Execute (ApplyExpr (VarExpr "main") (CollectionExpr (map (ElementExpr . StringExpr) args)))]
-                      either print (const $ return ()) result
+              result <- evalEgisonTopExprs env (map LoadFile loadFiles)
+              case result of
+                Left err -> putStrLn $ show err
+                Right env -> do
+                  case mExpr of
+                    Just expr -> do
+                      ret <- runEgisonExpr env expr
+                      case ret of
+                        Left err -> putStrLn $ show err
+                        Right val -> putStrLn $ show val
+                    Nothing ->
+                      case mCmd of
+                        Just cmd -> runEgisonTopExpr env ("(execute " ++ cmd ++ ")") >> return ()
+                        Nothing ->
+                          case nonOpts of
+                            [] -> do
+                              when bannerFlag showBanner >> repl noIOFlag env prompt >> when bannerFlag showByebyeMessage
+                            (file:args) -> do
+                              case opts of
+                                Options {optTestOnly = True} -> do
+                                  result <- if noIOFlag
+                                              then do input <- readFile file
+                                                      runEgisonTopExprsNoIO env input
+                                              else evalEgisonTopExprsTestOnly env [LoadFile file]
+                                  either print (const $ return ()) result
+                                Options {optTestOnly = False} -> do
+                                  result <- evalEgisonTopExprs env [LoadFile file, Execute (ApplyExpr (VarExpr "main") (CollectionExpr (map (ElementExpr . StringExpr) args)))]
+                                  either print (const $ return ()) result
 
 data Options = Options {
     optShowVersion :: Bool,
     optShowHelp :: Bool,
+    optEvalString :: Maybe String,
+    optExecuteString :: Maybe String,
+    optLoadFiles :: [String],
     optNoIO :: Bool,
     optShowBanner :: Bool,
-    optLoadOnly :: Bool,
+    optTestOnly :: Bool,
     optPrompt :: String
     }
 
@@ -55,9 +72,12 @@ defaultOptions :: Options
 defaultOptions = Options {
     optShowVersion = False,
     optShowHelp = False,
+    optEvalString = Nothing,
+    optExecuteString = Nothing,
+    optLoadFiles = [],
     optNoIO = False,
     optShowBanner = True,
-    optLoadOnly = False,
+    optTestOnly = False,
     optPrompt = "> "
     }
 
@@ -69,32 +89,48 @@ options = [
   Option ['h', '?'] ["help"]
     (NoArg (\opts -> opts {optShowHelp = True}))
     "show usage information",
+  Option ['e'] ["eval"]
+    (ReqArg (\expr opts -> opts {optEvalString = Just expr})
+            "String")
+    "eval the argument string",
+  Option ['c'] ["command"]
+    (ReqArg (\expr opts -> opts {optExecuteString = Just expr})
+            "String")
+    "execute the argument string",
+  Option ['l'] ["load-file"]
+    (ReqArg (\d opts -> opts {optLoadFiles = optLoadFiles opts ++ [d]})
+            "[String]")
+    "load files",
   Option [] ["no-io"]
     (NoArg (\opts -> opts {optNoIO = True}))
-    "show usage information",
+    "prohibit all io primitives",
   Option [] ["no-banner"]
     (NoArg (\opts -> opts {optShowBanner = False}))
-    "show usage information",
-  Option ['l'] ["load"]
-    (NoArg (\opts -> opts {optLoadOnly = True}))
-    "show usage information",
+    "do not display banner",
+  Option ['t'] ["test"]
+    (NoArg (\opts -> opts {optTestOnly = True}))
+    "execute only test expressions",
   Option ['p'] ["prompt"]
     (ReqArg (\prompt opts -> opts {optPrompt = prompt})
             "String")
-    "prompt string"
+    "set prompt string"
   ]
 
 printHelp :: IO ()
 printHelp = do
-  putStrLn "Usage: egison [options] file"
+  putStrLn "Usage: egison [option]"
+  putStrLn "       egison [options] file"
   putStrLn ""
   putStrLn "Options:"
-  putStrLn "  --help                Display this information"
-  putStrLn "  --version             Display egison version information"
-  putStrLn "  --no-io               No IO primitives"
-  putStrLn "  --no-banner           Don't show banner"
-  putStrLn "  --load                Don't execute main function"
-  putStrLn "  --prompt string       Set prompt of the interpreter"
+  putStrLn "  --help, -h                 Display this information"
+  putStrLn "  --version, -v              Display egison version information"
+  putStrLn "  --eval, -e string          Evaluate the argument string"
+  putStrLn "  --command, -c string       Execute the argument string"
+  putStrLn "  --load-file, -l string     Load the argument file"
+  putStrLn "  --test, -t                 Run only test expressions"
+  putStrLn "  --prompt string            Set prompt of the interpreter"
+  putStrLn "  --no-banner                Don't show banner"
+  putStrLn "  --no-io                    Prohibit all IO primitives"
   putStrLn ""
   exitWith ExitSuccess
 

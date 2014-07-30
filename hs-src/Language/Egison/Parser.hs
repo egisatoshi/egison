@@ -404,7 +404,7 @@ letExpr :: Parser EgisonExpr
 letExpr = keywordLet >> LetExpr <$> bindings <*> expr
 
 doExpr :: Parser EgisonExpr
-doExpr = keywordDo >> DoExpr <$> statements <*> expr
+doExpr = keywordDo >> DoExpr <$> statements <*> option (ApplyExpr (VarExpr "return") (TupleExpr [])) expr
 
 statements :: Parser [BindingExpr]
 statements = braces $ sepEndBy statement whiteSpace

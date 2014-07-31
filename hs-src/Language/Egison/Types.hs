@@ -246,7 +246,7 @@ data EgisonType =
   | CollectionType EgisonType
   | TupleType [EgisonType]
   | MatcherType EgisonType
-  | FunctionType EgisonType EgisonType
+  | FunctionType [EgisonType] EgisonType
   | PatternType EgisonType
  deriving (Show)
 

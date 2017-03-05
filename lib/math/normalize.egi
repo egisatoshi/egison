@@ -6,6 +6,61 @@
 
 (define $math-normalize
   (lambda [$fn $x1 $x2]
+    (match [fn x1 x2] [something math-expr math-expr]
+      {[[_ ,0 _]
+        (fn x1 x2)]
+       [[_ _ ,0]
+        (fn x1 x2)]
+       [[_ ?integer? ?integer?]
+        (fn x1 x2)]
+       [[,b.+' <div $p1 $q1> <div $p2 $q2>]
+;        (/' (debug ((debug math-normalize-+) (debug (math-normalize-* p1 q2)) (debug (math-normalize-* p2 q1)))) (math-normalize-* q1 q2))]
+        (/' (math-normalize-+ (math-normalize-* p1 q2) (math-normalize-* p2 q1)) (math-normalize-* q1 q2))]
+       [[,b.*' <div $p1 $q1> <div $p2 $q2>]
+        (/' (math-normalize-* p1 p2) (math-normalize-* q1 q2))]})))
+
+(define $math-normalize-* b.*')
+
+(define $math-normalize-+
+  (lambda [$x1 $x2]
+    (if (2#(or (or (contain-function? cos %1) (contain-function? sin %1)) (or (contain-function? cos %2) (contain-function? sin %2))) x1 x2)
+;      (debug (math-normalize-+-cos-and-sin (debug x1) (debug x2)))
+      (math-normalize-+-cos-and-sin x1 x2)
+      (b.+' x1 x2))))
+
+(define $math-normalize-+-cos-and-sin2
+  (lambda [$x1 $x2]
+    (let {[$tmp (b.+' x1 x2)]}
+      (match tmp math-expr
+        {[(+ (* $a (,cos $θ)^,2 $mr) (* ,a (,sin ,θ)^,2 ,mr) $pr)
+          (math-normalize-+-cos-and-sin pr (*' a mr))]
+         [_ tmp]}))))
+
+(define $math-normalize-+-cos-and-sin
+  (lambda [$x1 $x2]
+    (match [x1 x2] [math-expr math-expr]
+      {[[(+ (* $a (,cos $θ)^,2 $mr) $pr1)
+         (+ (* ,a (,sin ,θ)^,2 ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' a mr))]
+       [[(+ (* $a (,sin $θ)^,2 $mr) $pr1)
+         (+ (* ,a (,cos ,θ)^,2 ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' a mr))]
+       [[(+ (* $a $mr) $pr1)
+         (+ (* ,(* -1 a) (,sin $θ)^,2 ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' a (cos θ)^2 mr))]
+       [[(+ (* $a (,sin $θ)^,2  $mr) $pr1)
+         (+ (* ,(* -1 a) ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' -1 a (cos θ)^2 mr))]
+       [[(+ (* $a $mr) $pr1)
+         (+ (* ,(* -1 a) (,cos $θ)^,2 ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' a (sin θ)^2 mr))]
+       [[(+ (* $a (,cos $θ)^,2  $mr) $pr1)
+         (+ (* ,(* -1 a) ,mr) $pr2)]
+        (math-normalize-+-cos-and-sin (math-normalize-+-cos-and-sin pr1 pr2) (*' -1 a (sin θ)^2 mr))]
+       [_ (b.+' x1 x2)]})))
+
+(define $math-normalize2
+  (lambda [$fn $x1 $x2]
     (if (or (integer? x1) (integer? x2))
       (fn x1 x2)
 

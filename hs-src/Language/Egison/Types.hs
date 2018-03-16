@@ -283,7 +283,7 @@ data EgisonExpr =
 
   | SomethingExpr
   | UndefinedExpr
- deriving (Eq)
+ deriving (Show, Eq)
 
 data Arg =
     ScalarArg String
@@ -1161,20 +1161,20 @@ type Matcher = EgisonValue
 
 type PrimitiveFunc = WHNFData -> EgisonM WHNFData
 
-instance Show EgisonExpr where
-  show (CharExpr c) = "c#" ++ [c]
-  show (StringExpr str) = "\"" ++ T.unpack str ++ "\""
-  show (BoolExpr True) = "#t"
-  show (BoolExpr False) = "#f"
-  show (IntegerExpr n) = show n
-  show (FloatExpr x y) = showComplexFloat x y
-  show (VarExpr name) = show name
-  show (PartialVarExpr n) = "%" ++ show n
-  show (FunctionExpr args) = "function [" ++ unwords (map show args) ++ "]"
-
-  show (ApplyExpr fn (TupleExpr [])) = "(" ++ show fn ++ ")"
-  show (ApplyExpr fn (TupleExpr args)) = "(" ++ show fn ++ " " ++ unwords (map show args) ++ ")"
-  show (ApplyExpr fn arg) = "(" ++ show fn ++ " " ++ show arg ++ ")"
+-- instance Show EgisonExpr where
+--   show (CharExpr c) = "c#" ++ [c]
+--   show (StringExpr str) = "\"" ++ T.unpack str ++ "\""
+--   show (BoolExpr True) = "#t"
+--   show (BoolExpr False) = "#f"
+--   show (IntegerExpr n) = show n
+--   show (FloatExpr x y) = showComplexFloat x y
+--   show (VarExpr name) = show name
+--   show (PartialVarExpr n) = "%" ++ show n
+--   show (FunctionExpr args) = "function [" ++ unwords (map show args) ++ "]"
+--
+--   show (ApplyExpr fn (TupleExpr [])) = "(" ++ show fn ++ ")"
+--   show (ApplyExpr fn (TupleExpr args)) = "(" ++ show fn ++ " " ++ unwords (map show args) ++ ")"
+--   show (ApplyExpr fn arg) = "(" ++ show fn ++ " " ++ show arg ++ ")"
 
 
 instance Show EgisonValue where

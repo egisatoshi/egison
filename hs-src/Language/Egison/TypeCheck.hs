@@ -17,10 +17,12 @@ import Data.Maybe (fromMaybe)
 -- TStar is a kind of wildcard of type.
 -- The argument of TFun is Tuple.
 -- This is because Egison doesn't do currying, so the arity doesn't change.
--- TCollection is like a list in Haskell. All its element must have the
--- same type.
+-- TCollection is like a list in Haskell.
+-- All its element must have the same type.
+-- TCFun a b is a function which have arbitrary length args like (+ 1 2 3 4).
+-- All TCFun arguments have same type a.
 data Type = TChar | TString | TBool | TInt | TVar TVarIndex | TStar |
-            TFun Type Type | TTuple [Type] | TCollection Type
+            TFun Type Type | TTuple [Type] | TCollection Type | TCFun Type Type | TTensor Type
             deriving (Show,Eq)
 type TVarIndex = Int
 
@@ -57,6 +59,11 @@ innersToExprs (ET.ElementExpr e:rest) = e:(innersToExprs rest)
 innersToExprs ((ET.SubCollectionExpr (ET.CollectionExpr is)):rest) =
     innersToExprs is ++ innersToExprs rest
 
+removeTensorMap :: ET.EgisonExpr -> ET.EgisonExpr
+removeTensorMap (ET.TensorMapExpr (ET.LambdaExpr _ b) _) = removeTensorMap b
+removeTensorMap (ET.TensorMap2Expr (ET.LambdaExpr _ b) _ _) = removeTensorMap b
+removeTensorMap e = e
+
 exprToSub' :: TypeEnvironmet -> Type -> ET.EgisonExpr -> MakeSubstition (Substitution, Type)
 exprToSub' env ty (ET.CharExpr _ ) = return ([(ty,TChar)], TChar)
 exprToSub' env ty (ET.StringExpr _) = return ([(ty,TString)], TString)
@@ -82,4 +89,6 @@ exprToSub' env ty (ET.CollectionExpr es) = do
     let ty' = TCollection (TVar tv)
     sub3 <- unifySub $ ((ty, ty') : sub1 ++ sub2)
     return (sub3, applySub sub3 ty')
+exprToSub' env ty (ET.LambdaExpr args body) = do
+    let body' = removeTensorMap body
 exprToSub' env ty _ = return ([], TStar)

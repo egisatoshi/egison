@@ -21,6 +21,7 @@ import System.IO
 import Language.Egison
 import Language.Egison.Util
 import Language.Egison.MathOutput
+import qualified Language.Egison.TypeCheck as TC
 
 main :: IO ()
 main = do args <- getArgs
@@ -257,6 +258,8 @@ repl noIOFlag mathExprLang env prompt = do
         -- show AST for debug
         ast <-  fromEgisonM $ readTopExpr topExpr
         print ast
+        let tc = ast >>= (return . TC.checkTopExpr)
+        print tc
         -- show AST for debug
         result <- liftIO $ runEgisonTopExpr' env topExpr
         case result of

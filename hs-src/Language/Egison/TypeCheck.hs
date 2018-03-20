@@ -30,7 +30,8 @@ type TVarIndex = Int
 -- Second element of Restriction is what the first element refer.
 type Restriction = (Type,Type) 
 type Substitution = [Restriction]
-type TypeEnvironmet = [(ET.EgisonExpr,Type)]
+-- [(Variable name, Type)]
+type TypeEnvironment = [([String],Type)]
 type MakeSubstition = ExceptT String (State TVarIndex)
 
 checkTopExpr :: ET.EgisonTopExpr -> Either String (Substitution, Type)
@@ -64,11 +65,23 @@ removeTensorMap (ET.TensorMapExpr (ET.LambdaExpr _ b) _) = removeTensorMap b
 removeTensorMap (ET.TensorMap2Expr (ET.LambdaExpr _ b) _ _) = removeTensorMap b
 removeTensorMap e = e
 
-exprToSub' :: TypeEnvironmet -> Type -> ET.EgisonExpr -> MakeSubstition (Substitution, Type)
+lookupTypeEnv :: [String] -> TypeEnvironment -> MakeSubstition Type
+lookupTypeEnv e [] = do
+  i <- getNewTVarIndex
+  return $ (TVar i)
+lookupTypeEnv e1 ((e2,t):r)
+  | e1 == e2 = return t
+  | otherwise = lookupTypeEnv e1 r
+
+exprToSub' :: TypeEnvironment -> Type -> ET.EgisonExpr -> MakeSubstition (Substitution, Type)
 exprToSub' env ty (ET.CharExpr _ ) = return ([(ty,TChar)], TChar)
 exprToSub' env ty (ET.StringExpr _) = return ([(ty,TString)], TString)
 exprToSub' env ty (ET.BoolExpr _) = return ([(ty,TBool)], TBool)
 exprToSub' env ty (ET.IntegerExpr _) = return ([(ty,TInt)], TInt)
+exprToSub' env ty (ET.VarExpr (ET.Var vn)) = do
+    ty' <- lookupTypeEnv vn env
+    sub <- unifySub [(ty',ty)]
+    return (sub, applySub sub ty')
 exprToSub' env ty (ET.IfExpr e1 e2 e3) = do
     (sub1, t1) <- exprToSub' env TBool e1
     (sub2, t2) <- exprToSub' env ty e2
@@ -90,5 +103,14 @@ exprToSub' env ty (ET.CollectionExpr es) = do
     sub3 <- unifySub $ ((ty, ty') : sub1 ++ sub2)
     return (sub3, applySub sub3 ty')
 exprToSub' env ty (ET.LambdaExpr args body) = do
-    let body' = removeTensorMap body
+    let args1 = filter (/= []) $ map f args
+    let body1 = removeTensorMap body
+    arg1tys <- mapM (\_ -> do { x <- getNewTVarIndex; return (TVar x)}) args1
+    let env1 = (zip args1 arg1tys) ++ env
+    tv <- getNewTVarIndex
+    (sub1,ty1) <- exprToSub' env1 (TVar tv) body1
+    sub2 <- unifySub $ (ty, TFun (TTuple arg1tys) ty1):sub1
+    return (sub2, applySub sub2 ty)
+      where f (ET.TensorArg s) = [s]
+            f _ = []
 exprToSub' env ty _ = return ([], TStar)

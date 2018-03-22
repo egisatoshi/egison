@@ -13,6 +13,7 @@ import qualified Language.Egison.Types as ET
 import Control.Monad.State (State,evalState,get,put)
 import Control.Monad.Trans.Except (ExceptT,runExceptT)
 import Data.Maybe (fromMaybe)
+import Data.List(nub)
 
 -- TStar is a kind of wildcard of type.
 -- The argument of TFun is Tuple.
@@ -22,7 +23,7 @@ import Data.Maybe (fromMaybe)
 -- TCFun a b is a function which have arbitrary length args like (+ 1 2 3 4).
 -- All TCFun arguments have same type a.
 data Type = TChar | TString | TBool | TInt | TVar TVarIndex | TStar |
-            TFun Type Type | TTuple [Type] | TCollection Type | TCFun Type Type | TTensor Type
+            TFun Type Type | TTuple [Type] | TCollection Type | TTensor Type
             deriving (Show,Eq)
 type TVarIndex = Int
 
@@ -43,10 +44,54 @@ exprToSub e = evalState (runExceptT $ exprToSub' [] (TVar 0) e) 1
 
 applySub :: Substitution -> Type -> Type
 applySub s (TVar i) = fromMaybe (TVar i) (lookup (TVar i) s)
+applySub s (TFun t1 t2) = TFun (applySub s t1) (applySub s t2)
+applySub s (TTuple ts) = TTuple (map (applySub s) ts)
+applySub s (TCollection t) = TCollection (applySub s t)
 applySub _ t = t
 
+freeTVarIndex :: Type -> [TVarIndex]
+freeTVarIndex = nub . freeTVarIndex'
+    where
+        freeTVarIndex' (TVar i) = [i]
+        freeTVarIndex' (TFun t1 t2) = freeTVarIndex' t1 ++ freeTVarIndex' t2
+        freeTVarIndex' (TTuple ts) = concatMap freeTVarIndex' ts
+        freeTVarIndex' (TCollection t1) = freeTVarIndex' t1
+        freeTVarIndex' _ = []
+
+-- replace all t1 in t3 with t2
+replace :: Type -> Type -> Type -> Type
+replace t1 t2 t3 = if t1 == t3
+  then t2
+  else case t3 of
+    TFun t4 t5 -> TFun (replace t1 t2 t4) (replace t1 t2 t5)
+    TTuple ts -> TTuple (map (replace t1 t2) ts)
+    TCollection t -> TCollection (replace t1 t2 t)
+    _ -> t3
+
+-- replace all t1 in s with t2
+replaceSubstituition :: Type -> Type -> Substitution -> Substitution
+replaceSubstituition t1 t2 s = map (\(x,y) -> ((replace t1 t2 x), (replace t1 t2 y))) s
+
 unifySub :: Substitution -> MakeSubstition Substitution
-unifySub s = return s
+unifySub [] = return []
+unifySub ((t1, t2) : r)
+    | t1 == t2 = unifySub r
+    | otherwise = case (t1, t2) of
+        ((TFun t3 t4),(TFun t5 t6)) -> unifySub ((t3,t5):(t4,t6):r)
+        (TTuple ts1, TTuple ts2) -> if length ts1 == length ts2
+          then unifySub $ (zip ts1 ts2) ++ r
+          else fail "Lengths of tuple are not equal"
+        (TCollection t3,TCollection t4) -> unifySub $ (t3,t4):r
+        (TVar tv1,t4) -> if tv1 `elem` freeTVarIndex t4
+            then fail "Type variable is occured recursively."
+            else do
+              u <- unifySub (replaceSubstituition (TVar tv1) t4 r) 
+              return $ ((applySub u (TVar tv1)),(applySub u t4)):u
+        (t4, TVar t3) -> unifySub ((TVar t3,t4) : r)
+        (TStar, _) -> unifySub r
+        (_, TStar) -> unifySub r
+        otherwise -> fail $ "Undefined pattern in unifySub " ++ show (t1,t2)
+
 
 getNewTVarIndex :: MakeSubstition TVarIndex
 getNewTVarIndex = do

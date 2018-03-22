@@ -11,7 +11,8 @@ module Language.Egison.TypeCheck where
 
 import qualified Language.Egison.Types as ET
 import Control.Monad.State (State,evalState,get,put)
-import Control.Monad.Trans.Except (ExceptT,runExceptT)
+import Control.Monad.Trans.Except (ExceptT,runExceptT,catchE)
+import Control.Monad.Except(throwError)
 import Data.Maybe (fromMaybe)
 import Data.List(nub)
 
@@ -80,17 +81,17 @@ unifySub ((t1, t2) : r)
         ((TFun t3 t4),(TFun t5 t6)) -> unifySub ((t3,t5):(t4,t6):r)
         (TTuple ts1, TTuple ts2) -> if length ts1 == length ts2
           then unifySub $ (zip ts1 ts2) ++ r
-          else fail "Lengths of tuple are not equal"
+          else throwError "Lengths of tuple are not equal"
         (TCollection t3,TCollection t4) -> unifySub $ (t3,t4):r
         (TVar tv1,t4) -> if tv1 `elem` freeTVarIndex t4
-            then fail "Type variable is occured recursively."
+            then throwError "Type variable is occured recursively."
             else do
               u <- unifySub (replaceSubstituition (TVar tv1) t4 r) 
               return $ ((applySub u (TVar tv1)),(applySub u t4)):u
         (t4, TVar t3) -> unifySub ((TVar t3,t4) : r)
         (TStar, _) -> unifySub r
         (_, TStar) -> unifySub r
-        otherwise -> fail $ "Undefined pattern in unifySub " ++ show (t1,t2)
+        otherwise -> throwError $ "Undefined pattern in unifySub " ++ show (t1,t2)
 
 
 getNewTVarIndex :: MakeSubstition TVarIndex
@@ -128,11 +129,14 @@ exprToSub' env ty (ET.VarExpr (ET.Var vn)) = do
     sub <- unifySub [(ty',ty)]
     return (sub, applySub sub ty')
 exprToSub' env ty (ET.IfExpr e1 e2 e3) = do
+    let cb = (\x -> throwError "The condition of if expression is not Bool")
+    let ct = (\x -> throwError "The two type of bodies of if expression do not correspond.")
     (sub1, t1) <- exprToSub' env TBool e1
     (sub2, t2) <- exprToSub' env ty e2
     (sub3, t3) <- exprToSub' env ty e3
-    sub4 <- unifySub $ (t1, TBool) : (t2, t3) : sub1 ++ sub2 ++ sub3
-    return (sub4, applySub sub4 t2)
+    sub4 <- catchE (unifySub $ (t1, TBool) : sub1) cb
+    sub5 <- catchE (unifySub $ (t2, t3) : sub4 ++ sub2 ++ sub3) ct
+    return (sub5, applySub sub5 t2)
 exprToSub' env ty (ET.TupleExpr es) = do
     sts <- mapM (exprToSub' env TStar) es
     let ty' = TTuple (map snd sts)
@@ -145,7 +149,8 @@ exprToSub' env ty (ET.CollectionExpr es) = do
     tv <- getNewTVarIndex
     let sub2 = map (\x -> (TVar tv, snd x)) sts
     let ty' = TCollection (TVar tv)
-    sub3 <- unifySub $ ((ty, ty') : sub1 ++ sub2)
+    let cc = (\x -> throwError "The elemtents of collection do not have the same type.")
+    sub3 <- catchE (unifySub $ ((ty, ty') : sub1 ++ sub2)) cc
     return (sub3, applySub sub3 ty')
 exprToSub' env ty (ET.LambdaExpr args body) = do
     let args1 = filter (/= []) $ map f args

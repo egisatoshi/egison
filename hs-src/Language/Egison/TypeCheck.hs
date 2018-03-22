@@ -163,4 +163,11 @@ exprToSub' env ty (ET.LambdaExpr args body) = do
     return (sub2, applySub sub2 ty)
       where f (ET.TensorArg s) = [s]
             f _ = []
+exprToSub' env ty (ET.ApplyExpr fun arg) = do
+    tv <- getNewTVarIndex
+    (sub1, t1) <- exprToSub' env (TVar tv) arg
+    (sub2, t2) <- exprToSub' env (TFun (TVar tv) ty) fun
+    let cc = (\x -> throwError "Wrong arguments are passed to a function.")
+    sub3 <- catchE (unifySub $ (t2, (TFun (TVar tv) ty)) : (t1, TVar tv) : sub1 ++ sub2) cc
+    return (sub3, applySub sub3 ty)
 exprToSub' env ty _ = return ([], TStar)

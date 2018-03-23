@@ -24,7 +24,7 @@ import Data.List(nub)
 -- TCFun a b is a function which have arbitrary length args like (+ 1 2 3 4).
 -- All TCFun arguments have same type a.
 data Type = TChar | TString | TBool | TInt | TVar TVarIndex | TStar |
-            TFun Type Type | TTuple [Type] | TCollection Type | TTensor Type
+            TFun Type Type | TTuple [Type] | TCollection Type | TPattern Type | TMatcher Type
             deriving (Show,Eq)
 type TVarIndex = Int
 
@@ -48,6 +48,8 @@ applySub s (TVar i) = fromMaybe (TVar i) (lookup (TVar i) s)
 applySub s (TFun t1 t2) = TFun (applySub s t1) (applySub s t2)
 applySub s (TTuple ts) = TTuple (map (applySub s) ts)
 applySub s (TCollection t) = TCollection (applySub s t)
+applySub s (TPattern t) = TPattern (applySub s t)
+applySub s (TMatcher t) = TMatcher (applySub s t)
 applySub _ t = t
 
 freeTVarIndex :: Type -> [TVarIndex]
@@ -57,6 +59,8 @@ freeTVarIndex = nub . freeTVarIndex'
         freeTVarIndex' (TFun t1 t2) = freeTVarIndex' t1 ++ freeTVarIndex' t2
         freeTVarIndex' (TTuple ts) = concatMap freeTVarIndex' ts
         freeTVarIndex' (TCollection t1) = freeTVarIndex' t1
+        freeTVarIndex' (TPattern t1) = freeTVarIndex' t1
+        freeTVarIndex' (TMatcher t1) = freeTVarIndex' t1
         freeTVarIndex' _ = []
 
 -- replace all t1 in t3 with t2
@@ -67,6 +71,8 @@ replace t1 t2 t3 = if t1 == t3
     TFun t4 t5 -> TFun (replace t1 t2 t4) (replace t1 t2 t5)
     TTuple ts -> TTuple (map (replace t1 t2) ts)
     TCollection t -> TCollection (replace t1 t2 t)
+    TPattern t -> TPattern (replace t1 t2 t)
+    TMatcher t -> TMatcher (replace t1 t2 t)
     _ -> t3
 
 -- replace all t1 in s with t2
@@ -83,6 +89,8 @@ unifySub ((t1, t2) : r)
           then unifySub $ (zip ts1 ts2) ++ r
           else throwError "Lengths of tuple are not equal"
         (TCollection t3,TCollection t4) -> unifySub $ (t3,t4):r
+        (TPattern t3,TPattern t4) -> unifySub $ (t3,t4):r
+        (TMatcher t3,TMatcher t4) -> unifySub $ (t3,t4):r
         (TVar tv1,t4) -> if tv1 `elem` freeTVarIndex t4
             then throwError "Type variable is occured recursively."
             else do
@@ -196,5 +204,14 @@ exprToSub' env ty (ET.LetRecExpr binds body) = do
     return (sub4, applySub sub4 ty)
       where f (([ET.Var s],_)) = s
             f _ = []
+exprToSub' env ty (ET.MatchAllExpr dt mt (pt,ex)) = do
+    tvdt <- getNewTVarIndex
+    tvex <- getNewTVarIndex
+    (sub1, ty1) <- exprToSub' env (TVar tvdt) dt
+    (sub2, ty2) <- exprToSub' env (TMatcher (TVar tvdt)) mt
+    -- (sub3, ty3) <- exprToSub' env (TPattern (TVar tvdt)) pt
+    (sub4, ty4) <- exprToSub' env (TVar tvex) ex
+    sub5 <- unifySub $ (ty1, TVar tvdt) : (ty2,TMatcher (TVar tvdt)) : (ty4, TVar tvex) : (ty,TCollection (TVar tvex)) : sub1 ++ sub2 ++ sub4
+    return (sub5, applySub sub5 ty)
 exprToSub' env ty _ = return ([], TStar)
 

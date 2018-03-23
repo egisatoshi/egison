@@ -170,4 +170,31 @@ exprToSub' env ty (ET.ApplyExpr fun arg) = do
     let cc = (\x -> throwError "Wrong arguments are passed to a function.")
     sub3 <- catchE (unifySub $ (t2, (TFun (TVar tv) ty)) : (t1, TVar tv) : sub1 ++ sub2) cc
     return (sub3, applySub sub3 ty)
+exprToSub' env ty (ET.LetExpr binds body) = do
+    let names = filter (/= []) $ map f binds
+    let exs = map snd binds
+    tys <- mapM (\x -> getNewTVarIndex >>= (return . TVar)) binds
+    sts <- mapM (\(x,y) -> exprToSub' env x y) $ zip tys exs
+    let env1 = env ++ zip names tys
+    let sub1 = zip tys (map snd sts) ++ foldr (++) [] (map fst sts)
+    sub2 <- unifySub sub1
+    (sub3, ty3) <- exprToSub' env1 ty body
+    sub4 <- unifySub $ sub2 ++ sub3
+    return (sub4, applySub sub4 ty)
+      where f (([ET.Var s],_)) = s
+            f _ = []
+exprToSub' env ty (ET.LetRecExpr binds body) = do
+    let names = filter (/= []) $ map f binds
+    let exs = map snd binds
+    tys <- mapM (\x -> getNewTVarIndex >>= (return . TVar)) binds
+    sts <- mapM (\(x,y) -> exprToSub' env x y) $ zip tys exs
+    let env1 = env ++ zip names tys
+    let sub1 = zip tys (map snd sts) ++ foldr (++) [] (map fst sts)
+    sub2 <- unifySub sub1
+    (sub3, ty3) <- exprToSub' env1 ty body
+    sub4 <- unifySub $ sub2 ++ sub3
+    return (sub4, applySub sub4 ty)
+      where f (([ET.Var s],_)) = s
+            f _ = []
 exprToSub' env ty _ = return ([], TStar)
+

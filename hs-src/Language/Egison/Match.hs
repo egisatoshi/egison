@@ -2,7 +2,7 @@
 Module      : Language.Egison.Match
 Licence     : MIT
 
-This module defines some data types Egison pattern matching.
+This module defines some data types for pattern matching.
 -}
 
 module Language.Egison.Match
@@ -26,15 +26,21 @@ import           Language.Egison.IExpr
 -- Pattern Matching
 --
 
+-- | Pattern matching results are expressed as bindings.
 type Match = [Binding]
 
-data MatchingState
-  = MState { mStateEnv      :: Env
-           , loopPatCtx     :: [LoopPatContext]
-           , seqPatCtx      :: [SeqPatContext]
-           , mStateBindings :: [Binding]
-           , mTrees         :: [MatchingTree]
-           }
+data MatchingState = MState
+  { -- | Environment (needed for closed-scope pattern function).
+    mStateEnv      :: Env
+    -- | Context for loop patterns.
+  , loopPatCtx     :: [LoopPatContext]
+    -- | Context for sequential patterns.
+  , seqPatCtx      :: [SeqPatContext]
+    -- | Pattern matching results.
+  , mStateBindings :: [Binding]
+    -- | Matching tree.
+  , mTrees         :: [MatchingTree]
+  }
 
 instance Show MatchingState where
   show ms = "(MState " ++ unwords ["_", "_", "_", show (mStateBindings ms), show (mTrees ms)] ++ ")"
@@ -46,7 +52,13 @@ data MatchingTree
 
 type PatternBinding = (String, IPattern)
 
-data LoopPatContext = LoopPatContext (String, ObjectRef) ObjectRef IPattern IPattern IPattern
+data LoopPatContext =
+  LoopPatContext
+    (String, ObjectRef) -- ^ (iterator name, iterator value)
+    ObjectRef           -- ^ End values of the index
+    IPattern            -- ^ End pattern
+    IPattern            -- ^ Repeat pattern
+    IPattern            -- ^ Final pattern
 
 data SeqPatContext
   = SeqPatContext [MatchingTree] IPattern [Matcher] [WHNFData]

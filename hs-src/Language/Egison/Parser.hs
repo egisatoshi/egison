@@ -36,6 +36,7 @@ import qualified Language.Egison.Parser.SExpr as SExpr
 import           Language.Egison.RState
 import           Paths_egison                 (getDataFileName)
 
+-- | Parse top-level expressions.
 readTopExprs :: String -> EvalM [TopExpr]
 readTopExprs expr = do
   isSExpr <- asks optSExpr
@@ -44,6 +45,7 @@ readTopExprs expr = do
      else do r <- lift . lift $ NonS.parseTopExprs expr
              either (throwError . Parser) return r
 
+-- | Parse a top-level expression without using @EvalM@ monad to handle errors.
 parseTopExpr :: String -> RuntimeM (Either String TopExpr)
 parseTopExpr expr = do
   isSExpr <- asks optSExpr
@@ -51,6 +53,7 @@ parseTopExpr expr = do
      then return (SExpr.parseTopExpr expr)
      else NonS.parseTopExpr expr
 
+-- | Parse a top-level expression.
 readTopExpr :: String -> EvalM TopExpr
 readTopExpr expr = do
   isSExpr <- asks optSExpr
@@ -59,6 +62,7 @@ readTopExpr expr = do
      else do r <- lift . lift $ NonS.parseTopExpr expr
              either (throwError . Parser) return r
 
+-- | Parse expressions.
 readExprs :: String -> EvalM [Expr]
 readExprs expr = do
   isSExpr <- asks optSExpr
@@ -67,6 +71,7 @@ readExprs expr = do
      else do r <- lift . lift $ NonS.parseExprs expr
              either (throwError . Parser) return r
 
+-- | Parse a expression.
 readExpr :: String -> EvalM Expr
 readExpr expr = do
   isSExpr <- asks optSExpr
@@ -75,7 +80,7 @@ readExpr expr = do
      else do r <- lift . lift $ NonS.parseExpr expr
              either (throwError . Parser) return r
 
--- |Load a libary file
+-- | Read the given libary file and parse top-level expressions from them.
 loadLibraryFile :: FilePath -> EvalM [TopExpr]
 loadLibraryFile file = do
   homeDir <- liftIO getHomeDirectory
@@ -84,7 +89,7 @@ loadLibraryFile file = do
     then loadFile $ homeDir ++ "/.egison/" ++ file
     else liftIO (getDataFileName file) >>= loadFile
 
--- |Load a file
+-- | Read the given file and parse top-level expressions from them.
 loadFile :: FilePath -> EvalM [TopExpr]
 loadFile file = do
   doesExist <- liftIO $ doesFileExist file
@@ -99,10 +104,13 @@ loadFile file = do
   recursiveLoad (LoadFile file) = loadFile file
   recursiveLoad expr            = return [expr]
 
+-- | Append a single line comment-out before shebang, which is expected to
+--   come at start of the input.
 removeShebang :: Bool -> String -> String
 removeShebang useSExpr cs@('#':'!':_) = if useSExpr then ';' : cs else "--" ++ cs
 removeShebang _        cs             = cs
 
+-- | Read contents in a UTF-8 encoded file.
 readUTF8File :: FilePath -> IO String
 readUTF8File name = do
   h <- openFile name ReadMode

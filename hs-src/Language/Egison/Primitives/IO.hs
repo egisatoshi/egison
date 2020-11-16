@@ -29,6 +29,7 @@ import           Language.Egison.Primitives.Utils
 -- IO Primitives
 --
 
+-- | List of I\/O primitive functions.
 ioPrimitives :: [(String, EgisonValue)]
 ioPrimitives =
   map (\(name, fn) -> (name, PrimitiveFunc (fn name))) ioStrictPrimitives ++

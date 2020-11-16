@@ -36,11 +36,12 @@ import           Language.Egison.MathOutput (prettyMath)
 import           Language.Egison.Parser
 
 
--- | Evaluate an Egison expression.
+-- | Evaluate an Egison expression and return the evaluation result as value.
 evalExpr :: Env -> Expr -> EvalM EgisonValue
 evalExpr env expr = desugarExpr expr >>= evalExprDeep env
 
--- | Evaluate an Egison top expression.
+-- | Evaluate an Egison top-level expression.
+--   Return the evaluation result as value (if any) and the new environment.
 evalTopExpr :: Env -> TopExpr -> EvalM (Maybe EgisonValue, Env)
 evalTopExpr env topExpr = do
   topExpr <- desugarTopExpr topExpr
@@ -48,7 +49,8 @@ evalTopExpr env topExpr = do
     Nothing      -> return (Nothing, env)
     Just topExpr -> evalTopExpr' env topExpr
 
--- | Evaluate an Egison top expression.
+-- | Evaluate an Egison top-level expression.
+--   Return the evaluation result as string (if any) and the new environment.
 evalTopExprStr :: Env -> TopExpr -> EvalM (Maybe String, Env)
 evalTopExprStr env topExpr = do
   (val, env') <- evalTopExpr env topExpr
@@ -64,7 +66,8 @@ valueToStr val = do
     Nothing   -> return (show val)
     Just lang -> return (prettyMath lang val)
 
--- | Evaluate Egison top expressions.
+-- | Evaluate Egison top-level expressions and return the new environment.
+--   Results of the test expressions are printed out on the way.
 evalTopExprs :: Env -> [TopExpr] -> EvalM Env
 evalTopExprs env exprs = do
   exprs <- desugarTopExprs exprs
@@ -78,7 +81,8 @@ evalTopExprs env exprs = do
       Just val -> valueToStr val >>= liftIO . putStrLn
   return env
 
--- | Evaluate Egison top expressions.
+-- | Evaluate Egison top-level expressions and return the new environment.
+--   Results of the test expressions are __not__ printed out on the way.
 evalTopExprsNoPrint :: Env -> [TopExpr] -> EvalM Env
 evalTopExprsNoPrint env exprs = do
   exprs <- desugarTopExprs exprs
@@ -88,28 +92,32 @@ evalTopExprsNoPrint env exprs = do
   forM_ rest $ evalTopExpr' env
   return env
 
--- | Evaluate an Egison expression. Input is a Haskell string.
+-- | Parse and evaluate an Egison expression from a string.
+--   Return the evaluation result as value.
 runExpr :: Env -> String -> EvalM EgisonValue
 runExpr env input =
   readExpr input >>= evalExpr env
 
--- | Evaluate an Egison top expression. Input is a Haskell string.
+-- | Parse and evaluate an Egison top-level expression from a string.
+--   Return the evaluation result as value.
 runTopExpr :: Env -> String -> EvalM (Maybe EgisonValue, Env)
 runTopExpr env input =
   readTopExpr input >>= evalTopExpr env
 
--- | Evaluate Egison top expressions. Input is a Haskell string.
+-- | Parse and evaluate Egison top expressions from a string.
+--   Return the new environment.
+--   Results of the test expressions are printed out on the way.
 runTopExprs :: Env -> String -> EvalM Env
 runTopExprs env input =
   readTopExprs input >>= evalTopExprs env
 
--- | Load an Egison file.
+-- | Load an Egison file and return the new environment.
 loadEgisonFile :: Env -> FilePath -> EvalM Env
 loadEgisonFile env path = do
   (_, env') <- evalTopExpr env (LoadFile path)
   return env'
 
--- | Load an Egison library.
+-- | Load an Egison library and return the new environment.
 loadEgisonLibrary :: Env -> FilePath -> EvalM Env
 loadEgisonLibrary env path = do
   (_, env') <- evalTopExpr env (Load path)

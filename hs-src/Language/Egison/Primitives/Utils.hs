@@ -1,6 +1,8 @@
 {- |
 Module      : Language.Egison.Primitives.Utils
 Licence     : MIT
+
+This module provides some utility functions for defining primitive functions.
 -}
 
 module Language.Egison.Primitives.Utils

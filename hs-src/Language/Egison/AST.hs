@@ -38,16 +38,18 @@ import           Data.List  (find)
 import           Data.Maybe (fromJust)
 import           Data.Text  (Text)
 
+-- | Top-level expression.
 data TopExpr
-  = Define VarWithIndices Expr
+  = Define VarWithIndices Expr -- ^ Global definition.
   | Test Expr
   | Execute Expr
     -- temporary : we will replace load to import and export
   | LoadFile String
   | Load String
-  | InfixDecl Bool Op -- True for pattern infix; False for expression infix
+  | InfixDecl Bool Op -- ^ Infix declaration. The first argument is True for pattern infix and False for expression infix.
  deriving Show
 
+-- | Expressions for constants.
 data ConstantExpr
   = CharExpr Char
   | StringExpr Text
@@ -58,11 +60,12 @@ data ConstantExpr
   | UndefinedExpr
   deriving Show
 
+-- | Expressions.
 data Expr
   = ConstantExpr ConstantExpr
   | VarExpr String
   | FreshVarExpr
-  | IndexedExpr Bool Expr [IndexExpr Expr]  -- True -> delete old index and append new one
+  | IndexedExpr Bool Expr [IndexExpr Expr]  -- ^ When the first argument is True, delete old index and append new one.
   | SubrefsExpr Bool Expr Expr
   | SuprefsExpr Bool Expr Expr
   | UserrefsExpr Bool Expr Expr
@@ -74,7 +77,7 @@ data Expr
   | VectorExpr [Expr]
 
   | LambdaExpr [Arg ArgPattern] Expr
-  | LambdaExpr' [Arg String] Expr
+  | LambdaExpr' [Arg String] Expr -- ^ Only appears during the desugar.
   | MemoizedLambdaExpr [String] Expr
   | CambdaExpr String Expr
   | PatternFunctionExpr [String] Pattern
@@ -100,14 +103,17 @@ data Expr
 
   | PrefixExpr String Expr
   | InfixExpr Op Expr Expr
-  | SectionExpr Op (Maybe Expr) (Maybe Expr) -- There cannot be 'SectionExpr op (Just _) (Just _)'
+  -- ^ Nothing on the lhs or rhs denotes the missing argument.
+  --   For example, @(+ 1)@ is represented like "SectionExpr + Nothing 1".
+  --   There cannot be "SectionExpr op (Just _) (Just _)"
+  | SectionExpr Op (Maybe Expr) (Maybe Expr)
 
   | SeqExpr Expr Expr
   | ApplyExpr Expr [Expr]
   | CApplyExpr Expr Expr
-  | AnonParamFuncExpr Integer Expr
-  | AnonTupleParamFuncExpr Integer Expr
-  | AnonListParamFuncExpr Integer Expr
+  | AnonParamFuncExpr Integer Expr      -- ^ Example: @2#(%1 + %2)@
+  | AnonTupleParamFuncExpr Integer Expr -- ^ Example: @(2)#(%1 + %2)@
+  | AnonListParamFuncExpr Integer Expr  -- ^ Example: @[2]#(%1 + %2)@
   | AnonParamExpr Integer
 
   | GenerateTensorExpr Expr Expr
@@ -116,7 +122,7 @@ data Expr
   | TensorMapExpr Expr Expr
   | TensorMap2Expr Expr Expr Expr
   | TransposeExpr Expr Expr
-  | FlipIndicesExpr Expr                              -- Does not appear in user program
+  | FlipIndicesExpr Expr          -- ^ This doesn't appear in user program
 
   | FunctionExpr [String]
   deriving Show
@@ -130,6 +136,7 @@ data Arg a
   | TensorArg a
   deriving Show
 
+-- | Available patterns at the argument position of functions.
 data ArgPattern
   = APWildCard
   | APPatVar String
@@ -149,14 +156,15 @@ data VarIndex
   deriving Show
 
 data IndexExpr a
-  = Subscript a
-  | Superscript a
-  | SupSubscript a
-  | MultiSubscript a a
-  | MultiSuperscript a a
-  | Userscript a
+  = Subscript a          -- ^ Example: @x_i@
+  | Superscript a        -- ^ Example: @x~i@
+  | SupSubscript a       -- ^ Example: @x~_i@
+  | MultiSubscript a a   -- ^ Example: @x_(a_1)..._(a_n)@
+  | MultiSuperscript a a -- ^ Example: @x~(a_1)...~(a_n)@
+  | Userscript a         -- ^ Example: @f|x@
   deriving (Show, Eq, Functor, Foldable, Traversable)
 
+-- | Mode of pattern matching (BFS or DFS).
 data PMMode = BFSMode | DFSMode
   deriving Show
 
@@ -175,7 +183,7 @@ data Pattern
   | PredPat Expr
   | IndexedPat Pattern [Expr]
   | LetPat [BindingExpr] Pattern
-  | InfixPat Op Pattern Pattern -- Includes AndPat,OrPat,InductivePat(cons/join)
+  | InfixPat Op Pattern Pattern -- ^ This includes AndPat,OrPat,InductivePat(cons\/join)
   | NotPat Pattern
   | AndPat Pattern Pattern
   | OrPat Pattern Pattern
@@ -218,11 +226,12 @@ data PDPatternBase var
 
 type PrimitiveDataPattern = PDPatternBase String
 
+-- | Infix or prefix operators.
 data Op
-  = Op { repr     :: String  -- syntastic representation
+  = Op { repr     :: String -- ^ Syntactic representation of the operator.
        , priority :: Int
        , assoc    :: Assoc
-       , isWedge  :: Bool    -- True if operator is prefixed with '!'. Only used for expression infix.
+       , isWedge  :: Bool   -- ^ This is True iff operator is prefixed with '!'. Only used for expression infix.
        }
   deriving (Eq, Ord, Show)
 
@@ -239,13 +248,12 @@ instance Show Assoc where
   show InfixN = "infix"
   show Prefix = "prefix"
 
+-- | Definitions of built-in operators for expressions.
 reservedExprOp :: [Op]
 reservedExprOp =
   [ Op "!"  8 Prefix False -- Wedge
   , Op "-"  7 Prefix False -- Negate
   , Op "%"  7 InfixL False -- primitive function
-  , Op "*$" 7 Prefix False -- For InvertedScalarArg
-  , Op "*$" 7 InfixL False -- For InvertedScalarArg
   , Op "++" 5 InfixR False
   , Op "::" 5 InfixR False
   , Op "="  4 InfixL False -- primitive function
@@ -255,19 +263,22 @@ reservedExprOp =
   , Op ">"  4 InfixL False -- primitive function
   ]
 
+-- | Definitions of built-in operators for patterns.
 reservedPatternOp :: [Op]
 reservedPatternOp =
-  [ Op "::" 5 InfixR False  -- cons (desugared)
-  , Op "++" 5 InfixR False  -- join (desugared)
+  [ Op "::" 5 InfixR False -- cons (desugared)
+  , Op "++" 5 InfixR False -- join (desugared)
   , Op "&"  3 InfixR False
   , Op "|"  2 InfixR False
   ]
 
+-- | Find the instance of Op from the representation.
 findOpFrom :: String -> [Op] -> Op
 findOpFrom op table = fromJust $ find ((== op) . repr) table
 
 stringToVarWithIndices :: String -> VarWithIndices
 stringToVarWithIndices name = VarWithIndices name []
 
+-- | Make @ApplyExpr@ from a function name in string and a list of arguments.
 makeApply :: String -> [Expr] -> Expr
 makeApply func args = ApplyExpr (VarExpr func) args

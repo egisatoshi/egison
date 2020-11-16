@@ -17,6 +17,8 @@ import           Language.Egison.Data
 import           Language.Egison.Math
 import           Language.Egison.Primitives.Utils
 
+-- | List of primitive functions that judges whether a given value is of certain
+--   type.
 primitiveTypeFunctions :: [(String, EgisonValue)]
 primitiveTypeFunctions =
   map (\(name, fn) -> (name, PrimitiveFunc (fn name))) strictPrimitives ++

@@ -43,8 +43,8 @@ data EgisonOpts = EgisonOpts {
     optFilterTsvInput   :: Maybe String,
     -- | Output results in TSV format. Default is False.
     optTsvOutput        :: Bool,
-    -- | Disable I/O operations, loading from external files/libraries, and
-    --   I/O primitive functions. Default is False.
+    -- | Disable loading from external files\/libraries and I\/O primitive
+    --   functions. Default is False.
     optNoIO             :: Bool,
     -- | Show the interpreter banner. Default is True.
     optShowBanner       :: Bool,
@@ -63,6 +63,7 @@ data EgisonOpts = EgisonOpts {
     optMathNormalize    :: Bool
     }
 
+-- | Default settings for EgisonOpts.
 defaultOption :: EgisonOpts
 defaultOption = EgisonOpts Nothing False Nothing Nothing [] [] [] Nothing Nothing Nothing False False True False "> " Nothing False True
 

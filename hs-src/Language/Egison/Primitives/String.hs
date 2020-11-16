@@ -23,6 +23,7 @@ import           Language.Egison.Pretty
 import           Language.Egison.Primitives.Utils
 
 
+-- | List of primitive functions that works on strings.
 primitiveStringFunctions :: [(String, EgisonValue)]
 primitiveStringFunctions =
   map (\(name, fn) -> (name, PrimitiveFunc (fn name))) strictPrimitives

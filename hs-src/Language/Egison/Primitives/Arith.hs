@@ -16,6 +16,7 @@ import           Language.Egison.Data
 import           Language.Egison.Math
 import           Language.Egison.Primitives.Utils
 
+-- | List of primitive functions that works on numbers.
 primitiveArithFunctions :: [(String, EgisonValue)]
 primitiveArithFunctions =
   map (\(name, fn) -> (name, PrimitiveFunc (fn name))) strictPrimitives

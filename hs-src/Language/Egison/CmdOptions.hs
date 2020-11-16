@@ -17,30 +17,56 @@ import           Data.Maybe          (maybeToList)
 import           Options.Applicative
 import qualified Text.Parsec         as P
 
+-- | Command-line options for the Egison interpreter.
+--   See https://egison.readthedocs.io/en/latest/reference/command-line-options.html
+--   for the detailed description of some of the fields.
 data EgisonOpts = EgisonOpts {
+    -- | Execute the main function of the given file with command-line options.
     optExecFile         :: Maybe (String, [String]),
+    -- | When True, show version number and exit.
     optShowVersion      :: Bool,
+    -- | Evaluate the input string, which is an expression, and exit.
     optEvalString       :: Maybe String,
+    -- | Execute the input string, which is a toplevel expression, and exit.
     optExecuteString    :: Maybe String,
+    -- | Specify how to interpret the TSV input.
     optFieldInfo        :: [(String, String)],
+    -- | Names of libraries to load.
     optLoadLibs         :: [String],
+    -- | Names of files to load.
     optLoadFiles        :: [String],
+    -- | For the -s / --substitute option.
     optSubstituteString :: Maybe String,
+    -- | For the -m / --map option.
     optMapTsvInput      :: Maybe String,
+    -- | For the -f / --filter option.
     optFilterTsvInput   :: Maybe String,
+    -- | Output results in TSV format. Default is False.
     optTsvOutput        :: Bool,
+    -- | Disable I/O operations, loading from external files/libraries, and
+    --   I/O primitive functions. Default is False.
     optNoIO             :: Bool,
+    -- | Show the interpreter banner. Default is True.
     optShowBanner       :: Bool,
+    -- | Do not execute the main function and only evaluate the top-level
+    --   expressions in the file. Default is False.
     optTestOnly         :: Bool,
+    -- | Prompt of the interpreter. Default is "> ".
     optPrompt           :: String,
+    -- | Output results in markup format. Available options are latex,
+    --   asciimath, mathematica and maxima
     optMathExpr         :: Maybe String,
+    -- | Use the old parser. Default is False.
     optSExpr            :: Bool,
+    -- | Enable simplification of math expressions by term rewriting.
+    --   Default is True.
     optMathNormalize    :: Bool
     }
 
 defaultOption :: EgisonOpts
 defaultOption = EgisonOpts Nothing False Nothing Nothing [] [] [] Nothing Nothing Nothing False False True False "> " Nothing False True
 
+-- | Command-line argument parser. Used in the interpreter.
 cmdParser :: ParserInfo EgisonOpts
 cmdParser = info (helper <*> cmdArgParser)
           $ fullDesc
